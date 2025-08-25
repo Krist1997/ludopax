@@ -10,18 +10,23 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import com.pumpkinprod.ludopax.appscreens.AppScreens
+import com.pumpkinprod.ludopax.nav.BottomNavBar
 import com.pumpkinprod.ludopax.ui.theme.LudopaxAppTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
         setContent {
             LudopaxAppTheme {
                 val navController = rememberNavController()
+
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = { AppScreens.BottomNavBar(navController) }
+                    bottomBar = { BottomNavBar(navController) }
                 ) { innerPadding ->
                     AppScreens.AppNavHost(
                         navController = navController,

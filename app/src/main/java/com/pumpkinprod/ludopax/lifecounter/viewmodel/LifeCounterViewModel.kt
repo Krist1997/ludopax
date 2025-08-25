@@ -1,30 +1,18 @@
-package com.pumpkinprod.ludopax.lifecounter
+package com.pumpkinprod.ludopax.lifecounter.viewmodel
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
+import com.pumpkinprod.ludopax.lifecounter.model.CounterType
+import com.pumpkinprod.ludopax.lifecounter.model.LifeUiState
+import com.pumpkinprod.ludopax.lifecounter.model.PlayerState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import javax.inject.Inject
 
-enum class CounterType(val label: String) { LIFE("Life"), POISON("Poison"), ENERGY("Energy"), EXPERIENCE("Exp") }
-
-data class PlayerState(
-    val id: Int,
-    val color: Color,
-    val activeCounter: CounterType = CounterType.LIFE,
-    val counters: Map<CounterType, Int> = mapOf(
-        CounterType.LIFE to 20,
-        CounterType.POISON to 0,
-        CounterType.ENERGY to 0,
-        CounterType.EXPERIENCE to 0
-    )
-)
-
-data class LifeUiState(
-    val players: List<PlayerState> = emptyList()
-)
-
-class LifeCounterViewModel : ViewModel() {
+@HiltViewModel
+class LifeCounterViewModel @Inject constructor() : ViewModel() {
 
     private val _uiState = MutableStateFlow(LifeUiState())
     val uiState: StateFlow<LifeUiState> = _uiState
