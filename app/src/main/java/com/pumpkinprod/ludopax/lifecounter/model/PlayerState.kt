@@ -10,6 +10,8 @@ data class PlayerState(
         CounterType.LIFE to 20,
         CounterType.POISON to 0,
         CounterType.ENERGY to 0,
-        CounterType.EXPERIENCE to 0
+        CounterType.EXPERIENCE to 0,
+        CounterType.RAD to 0,
+        CounterType.BOUNTY to 0
     )
 )

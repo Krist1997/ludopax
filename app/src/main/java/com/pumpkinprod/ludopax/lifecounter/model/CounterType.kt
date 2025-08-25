@@ -1,8 +1,10 @@
 package com.pumpkinprod.ludopax.lifecounter.model
 
 enum class CounterType(val label: String) {
-    LIFE("Life"),
-    POISON("Poison"),
-    ENERGY("Energy"),
-    EXPERIENCE("Exp")
+    LIFE("Life Points"),
+    POISON("Poison Counters"),
+    ENERGY("Energy Counters"),
+    EXPERIENCE("Experience Counters"),
+    RAD("Rad Counters"),
+    BOUNTY("Bounty Counters"),
 }

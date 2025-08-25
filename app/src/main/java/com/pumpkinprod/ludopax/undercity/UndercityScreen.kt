@@ -21,7 +21,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pumpkinprod.ludopax.R
 
 @Composable
@@ -29,7 +28,10 @@ fun UndercityScreen(viewModel: UndercityViewModel) {
     val pawnPositions by viewModel.pawnPositions.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.weight(1f).fillMaxSize().padding(top = 16.dp)) {
+        Box(modifier = Modifier
+            .weight(1f)
+            .fillMaxSize()
+            .padding(top = 16.dp)) {
             Image(
                 painter = painterResource(id = R.drawable.undercity),
                 contentDescription = "Undercity Dungeon",

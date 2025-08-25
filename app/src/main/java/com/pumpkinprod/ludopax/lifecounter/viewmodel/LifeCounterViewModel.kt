@@ -36,7 +36,9 @@ class LifeCounterViewModel @Inject constructor() : ViewModel() {
                     CounterType.LIFE to startLife,
                     CounterType.POISON to 0,
                     CounterType.ENERGY to 0,
-                    CounterType.EXPERIENCE to 0
+                    CounterType.EXPERIENCE to 0,
+                    CounterType.RAD to 0,
+                    CounterType.BOUNTY to 0
                 )
             )
         }
