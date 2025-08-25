@@ -25,18 +25,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pumpkinprod.ludopax.R
 
 @Composable
-fun UndercityScreen(
-    viewModel: UndercityViewModel = viewModel()
-) {
+fun UndercityScreen(viewModel: UndercityViewModel) {
     val pawnPositions by viewModel.pawnPositions.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxSize()
-                .padding(top = 16.dp)
-        ) {
+        Box(modifier = Modifier.weight(1f).fillMaxSize().padding(top = 16.dp)) {
             Image(
                 painter = painterResource(id = R.drawable.undercity),
                 contentDescription = "Undercity Dungeon",
@@ -48,17 +41,14 @@ fun UndercityScreen(
                 DraggablePawn(
                     initialPosition = pos,
                     pawnRes = if (index == 0) R.drawable.red_pawn else R.drawable.blue_pawn,
-                    onDrag = { dragAmount ->
-                        viewModel.updatePawn(index, pos + dragAmount)
-                    },
-                    onDragEnd = { endPosition ->
-                        viewModel.updatePawn(index, endPosition)
-                    }
+                    onDrag = { dragAmount -> viewModel.updatePawn(index, pos + dragAmount) },
+                    onDragEnd = { endPos -> viewModel.updatePawn(index, endPos) }
                 )
             }
         }
     }
 }
+
 
 @Composable
 fun DraggablePawn(

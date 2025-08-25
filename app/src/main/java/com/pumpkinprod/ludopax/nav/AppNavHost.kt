@@ -10,14 +10,20 @@ import com.pumpkinprod.ludopax.Routes
 import com.pumpkinprod.ludopax.lifecounter.ui.LifeCounterScreen
 import com.pumpkinprod.ludopax.lifecounter.viewmodel.LifeCounterViewModel
 import com.pumpkinprod.ludopax.pod.PodScreen
+import com.pumpkinprod.ludopax.pod.PodViewModel
 import com.pumpkinprod.ludopax.randomizer.RandomizerScreen
+import com.pumpkinprod.ludopax.randomizer.RandomizerViewModel
 import com.pumpkinprod.ludopax.undercity.UndercityScreen
+import com.pumpkinprod.ludopax.undercity.UndercityViewModel
 
 object AppScreens {
 
     @Composable
     fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
         val lifeCounterViewModel: LifeCounterViewModel = hiltViewModel()
+        val undercityViewModel: UndercityViewModel = hiltViewModel()
+        val podViewModel: PodViewModel = hiltViewModel()
+        val randomizerViewModel: RandomizerViewModel = hiltViewModel()
 
         NavHost(
             navController = navController,
@@ -28,10 +34,17 @@ object AppScreens {
                 LifeCounterScreen(vm = lifeCounterViewModel)
             }
 
-            composable(Routes.UNDERCITY) { UndercityScreen() }
-            composable(Routes.PODS) { PodScreen() }
-            composable(Routes.RANDOMIZER) { RandomizerScreen() }
+            composable(Routes.UNDERCITY) {
+                UndercityScreen(viewModel = undercityViewModel)
+            }
+
+            composable(Routes.PODS) {
+                PodScreen(viewModel = podViewModel)
+            }
+
+            composable(Routes.RANDOMIZER) {
+                RandomizerScreen(viewModel = randomizerViewModel)
+            }
         }
     }
-
 }

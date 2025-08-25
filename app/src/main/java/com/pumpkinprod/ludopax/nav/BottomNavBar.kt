@@ -35,7 +35,6 @@ fun BottomNavBar(navController: NavHostController) {
             onClick = {
                 navController.navigate(Routes.LIFE_COUNTER) {
                     launchSingleTop = true
-                    restoreState = true
                 }
             },
             icon = {
@@ -53,7 +52,6 @@ fun BottomNavBar(navController: NavHostController) {
             onClick = {
                 navController.navigate(Routes.UNDERCITY) {
                     launchSingleTop = true
-                    restoreState = true
                 }
             },
             icon = {
@@ -71,7 +69,6 @@ fun BottomNavBar(navController: NavHostController) {
             onClick = {
                 navController.navigate(Routes.PODS) {
                     launchSingleTop = true
-                    restoreState = true
                 }
             },
             icon = {
@@ -89,7 +86,6 @@ fun BottomNavBar(navController: NavHostController) {
             onClick = {
                 navController.navigate(Routes.RANDOMIZER) {
                     launchSingleTop = true
-                    restoreState = true
                 }
             },
             icon = {
