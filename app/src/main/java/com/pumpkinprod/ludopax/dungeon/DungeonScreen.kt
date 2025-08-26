@@ -116,7 +116,7 @@ fun DungeonScreen(viewModel: DungeonViewModel) {
                             sideMarginPx = sideMarginPx,
                             bottomMarginPx = bottomMarginPx
                         )
-                        viewModel.setCurrentDungeonPositions(defaults)
+                        viewModel.setAllDungeonPositions(defaults)
                     }
                 },
                 onDismiss = { showResetDialog = false }

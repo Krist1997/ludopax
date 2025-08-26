@@ -79,9 +79,14 @@ class DungeonViewModel : ViewModel() {
         }
     }
 
-    /** Set absolute positions for the CURRENT dungeon (used by Reset). */
-    fun setCurrentDungeonPositions(positions: List<Offset>) {
-        val dungeon = _selected.value
-        _positionsByDungeon.update { map -> map + (dungeon to positions.take(MAX_PAWNS)) }
+
+    // Resets ALL dungeons' pawns to the given positions (clamped to MAX_PAWNS)
+    fun setAllDungeonPositions(positions: List<Offset>) {
+        val clamped = positions.take(MAX_PAWNS)
+        _positionsByDungeon.update { map ->
+            // keep the same keys, but replace every value with the defaults
+            map.keys.associateWith { clamped }
+        }
     }
+
 }
