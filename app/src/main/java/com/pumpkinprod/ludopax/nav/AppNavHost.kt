@@ -14,14 +14,14 @@ import com.pumpkinprod.ludopax.pod.PodViewModel
 import com.pumpkinprod.ludopax.randomizer.RandomizerScreen
 import com.pumpkinprod.ludopax.randomizer.RandomizerViewModel
 import com.pumpkinprod.ludopax.dungeon.UndercityScreen
-import com.pumpkinprod.ludopax.dungeon.UndercityViewModel
+import com.pumpkinprod.ludopax.dungeon.DungeonViewModel
 
 object AppScreens {
 
     @Composable
     fun AppNavHost(navController: NavHostController, modifier: Modifier = Modifier) {
         val lifeCounterViewModel: LifeCounterViewModel = hiltViewModel()
-        val undercityViewModel: UndercityViewModel = hiltViewModel()
+        val dungeonViewModel: DungeonViewModel = hiltViewModel()
         val podViewModel: PodViewModel = hiltViewModel()
         val randomizerViewModel: RandomizerViewModel = hiltViewModel()
 
@@ -35,7 +35,7 @@ object AppScreens {
             }
 
             composable(Routes.UNDERCITY) {
-                UndercityScreen(viewModel = undercityViewModel)
+                UndercityScreen(viewModel = dungeonViewModel)
             }
 
             composable(Routes.PODS) {
