@@ -1,8 +1,17 @@
 package com.pumpkinprod.ludopax.lifecounter.ui.screen
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -10,8 +19,8 @@ import com.pumpkinprod.ludopax.lifecounter.viewmodel.LifeCounterViewModel
 
 @Composable
 fun LifeCounterMenu(vm: LifeCounterViewModel) {
-    var showMenu by remember { mutableStateOf(false) }
-    var showResetDialog by remember { mutableStateOf(false) }
+    var menuOpen by remember { mutableStateOf(false) }
+    var resetDialogOpen by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
@@ -19,42 +28,39 @@ fun LifeCounterMenu(vm: LifeCounterViewModel) {
             .padding(16.dp),
         contentAlignment = Alignment.Center
     ) {
-        // Centered floating menu button
-        FloatingActionButton(onClick = { showMenu = !showMenu }) {
+        FloatingActionButton(onClick = { menuOpen = !menuOpen }) {
             Text("Menu")
         }
 
-        // Dropdown menu options
         DropdownMenu(
-            expanded = showMenu,
-            onDismissRequest = { showMenu = false }
+            expanded = menuOpen,
+            onDismissRequest = { menuOpen = false }
         ) {
             DropdownMenuItem(
                 text = { Text("Reset") },
                 onClick = {
-                    showMenu = false
-                    showResetDialog = true
+                    menuOpen = false
+                    resetDialogOpen = true
                 }
             )
             DropdownMenuItem(
                 text = { Text("Back to Player Selection") },
                 onClick = {
-                    showMenu = false
+                    menuOpen = false
                     vm.clearPlayers()
                 }
             )
         }
 
-        // Confirmation dialog for reset
-        if (showResetDialog) {
+        if (resetDialogOpen) {
             ConfirmResetDialog(
                 title = "Reset Game",
                 message = "Are you sure you want to reset all player counters?",
                 onConfirm = {
-                    showResetDialog = false
+                    resetDialogOpen = false
                     vm.reset()
                 },
-                onDismiss = { showResetDialog = false }
+                onDismiss = { resetDialogOpen = false }
             )
         }
     }

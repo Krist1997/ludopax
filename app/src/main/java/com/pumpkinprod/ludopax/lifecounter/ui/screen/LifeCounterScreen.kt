@@ -15,17 +15,10 @@ fun LifeCounterScreen(vm: LifeCounterViewModel) {
     val players = uiState.players
 
     if (players.isEmpty()) {
-        // Show the player selection menu
         PlayerSelection(vm = vm)
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Player grid (now only needs players + viewModel)
-            PlayerGrid(
-                players = players,
-                viewModel = vm
-            )
-
-            // Life counter menu
+            PlayerGrid(players = players, viewModel = vm)
             LifeCounterMenu(vm = vm)
         }
     }

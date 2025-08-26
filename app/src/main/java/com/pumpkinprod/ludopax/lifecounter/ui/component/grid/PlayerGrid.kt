@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
 import com.pumpkinprod.ludopax.lifecounter.domain.PlayerState
 import com.pumpkinprod.ludopax.lifecounter.ui.component.card.PlayerCard
 import com.pumpkinprod.ludopax.lifecounter.viewmodel.LifeCounterViewModel
@@ -18,11 +19,7 @@ fun PlayerGrid(
     viewModel: LifeCounterViewModel
 ) {
     when (players.size) {
-        2 -> {
-            // simple split column
-            PlayerColumn(players, viewModel)
-        }
-
+        2 -> PlayerColumn(players, viewModel)
         3 -> {
             Column(Modifier.fillMaxSize()) {
                 PlayerCard(
@@ -41,24 +38,12 @@ fun PlayerGrid(
                 )
             }
         }
-
         4 -> {
             Column(Modifier.fillMaxSize()) {
-                PlayerRow(
-                    players = players.subList(0, 2),
-                    viewModel = viewModel,
-                    allCount = players.size,
-                    startIndex = 0
-                )
-                PlayerRow(
-                    players = players.subList(2, 4),
-                    viewModel = viewModel,
-                    allCount = players.size,
-                    startIndex = 2
-                )
+                PlayerRow(players.subList(0, 2), viewModel, players.size, 0)
+                PlayerRow(players.subList(2, 4), viewModel, players.size, 2)
             }
         }
-
         5 -> {
             Column(Modifier.fillMaxSize()) {
                 PlayerCard(
@@ -69,40 +54,20 @@ fun PlayerGrid(
                         .weight(1f)
                         .fillMaxWidth()
                 )
-                PlayerRow(
-                    players = players.subList(1, 3),
-                    viewModel = viewModel,
-                    allCount = players.size,
-                    startIndex = 1
-                )
-                PlayerRow(
-                    players = players.subList(3, 5),
-                    viewModel = viewModel,
-                    allCount = players.size,
-                    startIndex = 3
-                )
+                PlayerRow(players.subList(1, 3), viewModel, players.size, 1)
+                PlayerRow(players.subList(3, 5), viewModel, players.size, 3)
             }
         }
-
         6 -> {
             Column(Modifier.fillMaxSize()) {
                 var start = 0
                 while (start < 6) {
-                    PlayerRow(
-                        players = players.subList(start, start + 2),
-                        viewModel = viewModel,
-                        allCount = players.size,
-                        startIndex = start
-                    )
+                    PlayerRow(players.subList(start, start + 2), viewModel, players.size, start)
                     start += 2
                 }
             }
         }
-
-        else -> {
-            // fallback: stack everyone vertically
-            PlayerColumn(players, viewModel)
-        }
+        else -> PlayerColumn(players, viewModel)
     }
 }
 
@@ -115,7 +80,7 @@ private fun ColumnScope.PlayerRow(
 ) {
     Row(
         modifier = Modifier
-            .weight(1f)            // row takes equal vertical space
+            .weight(1f)
             .fillMaxWidth()
     ) {
         players.forEachIndexed { i, player ->
@@ -124,7 +89,7 @@ private fun ColumnScope.PlayerRow(
                 viewModel = viewModel,
                 rotationAngle = playerRotation(allCount, startIndex + i),
                 modifier = Modifier
-                    .weight(1f)      // split row horizontally
+                    .weight(1f)
                     .fillMaxHeight()
             )
         }
@@ -143,7 +108,7 @@ private fun PlayerColumn(
                 viewModel = viewModel,
                 rotationAngle = playerRotation(players.size, i),
                 modifier = Modifier
-                    .weight(1f)      // split column vertically
+                    .weight(1f)
                     .fillMaxWidth()
             )
         }
@@ -151,12 +116,22 @@ private fun PlayerColumn(
 }
 
 private fun playerRotation(playerCount: Int, index: Int): Float {
-    return when (playerCount) {
-        2 -> if (index == 0) 180f else 0f
-        3 -> listOf(180f, 90f, 270f)[index]
-        4 -> listOf(90f, 270f, 90f, 270f)[index]
-        5 -> listOf(180f, 90f, 270f, 90f, 270f)[index]
-        6 -> listOf(90f, 270f, 90f, 270f, 90f, 270f)[index]
-        else -> 0f
+    val patterns = when (playerCount) {
+        2 -> floatArrayOf(180f, 0f)
+        3 -> floatArrayOf(180f, 90f, 270f)
+        4 -> floatArrayOf(90f, 270f, 90f, 270f)
+        5 -> floatArrayOf(180f, 90f, 270f, 90f, 270f)
+        6 -> floatArrayOf(90f, 270f, 90f, 270f, 90f, 270f)
+        else -> floatArrayOf(0f)
     }
+    return patterns[index]
+}
+
+/* -------------------- PREVIEW (optional) -------------------- */
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 640)
+@Composable
+private fun PlayerGridPreview() {
+    val vm = LifeCounterViewModel().apply { setPlayers(4) }
+    PlayerGrid(players = vm.uiState.value.players, viewModel = vm)
 }

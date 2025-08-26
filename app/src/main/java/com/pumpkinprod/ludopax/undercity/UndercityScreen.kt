@@ -28,10 +28,12 @@ fun UndercityScreen(viewModel: UndercityViewModel) {
     val pawnPositions by viewModel.pawnPositions.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier
-            .weight(1f)
-            .fillMaxSize()
-            .padding(top = 16.dp)) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxSize()
+                .padding(top = 16.dp)
+        ) {
             Image(
                 painter = painterResource(id = R.drawable.undercity),
                 contentDescription = "Undercity Dungeon",

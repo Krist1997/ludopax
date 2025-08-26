@@ -17,7 +17,6 @@ import com.pumpkinprod.ludopax.lifecounter.viewmodel.LifeCounterViewModel
 
 @Composable
 fun PlayerSelection(vm: LifeCounterViewModel) {
-
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -29,9 +28,7 @@ fun PlayerSelection(vm: LifeCounterViewModel) {
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(2, 3, 4, 5, 6).forEach { n ->
-                Button(onClick = { vm.setPlayers(n) }) {
-                    Text("$n")
-                }
+                Button(onClick = { vm.setPlayers(n) }) { Text("$n") }
             }
         }
     }

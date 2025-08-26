@@ -1,28 +1,60 @@
 package com.pumpkinprod.ludopax.lifecounter.ui.component.card
 
+import android.annotation.SuppressLint
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChange
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pumpkinprod.ludopax.lifecounter.domain.CounterType
 import com.pumpkinprod.ludopax.lifecounter.domain.PlayerState
 import com.pumpkinprod.ludopax.lifecounter.viewmodel.LifeCounterViewModel
+import kotlinx.coroutines.launch
 import kotlin.math.abs
+
+private object UiDefaults {
+    const val SWIPE_THRESHOLD = 60f
+    val STRIP_THICKNESS_DP = 72.dp
+    const val SYMBOL_ALPHA = 0.25f
+
+    // Flash animation (strip-only overlay)
+    const val FLASH_MAX_ALPHA = 0.55f
+    const val FLASH_DURATION_MS = 220
+}
+
+private enum class StripSide { Left, Right, Top, Bottom }
 
 @Composable
 fun PlayerCard(
@@ -58,72 +90,68 @@ fun PlayerCardContent(
     val leftIsPlus = angle == 180f
     val topIsPlus = angle == 270f
 
+    // Always fetch the latest active counter from state when tapping +/-.
+    val currentType: () -> CounterType = {
+        viewModel.uiState.value.players
+            .first { it.id == player.id }
+            .activeCounter
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         if (isHorizontal) {
             Row(Modifier.fillMaxSize()) {
-                // Left tappable strip
                 CounterTapStrip(
                     plus = leftIsPlus,
                     onIncrement = { delta ->
-                        // always fetch the current active counter
-                        val currentType = viewModel.uiState.value.players
-                            .first { it.id == player.id }.activeCounter
-                        viewModel.incrementCounter(player.id, currentType, delta)
+                        viewModel.incrementCounter(player.id, currentType(), delta)
                     },
                     modifier = Modifier
-                        .width(72.dp)
+                        .width(UiDefaults.STRIP_THICKNESS_DP)
                         .fillMaxHeight(),
-                    alignment = Alignment.CenterStart
+                    alignment = Alignment.CenterStart,
+                    side = StripSide.Left
                 )
 
-                // Center swipe area
                 CounterSwipeArea(player, viewModel, angle, Modifier.weight(1f))
 
-                // Right tappable strip
                 CounterTapStrip(
                     plus = !leftIsPlus,
                     onIncrement = { delta ->
-                        val currentType = viewModel.uiState.value.players
-                            .first { it.id == player.id }.activeCounter
-                        viewModel.incrementCounter(player.id, currentType, delta)
+                        viewModel.incrementCounter(player.id, currentType(), delta)
                     },
                     modifier = Modifier
-                        .width(72.dp)
+                        .width(UiDefaults.STRIP_THICKNESS_DP)
                         .fillMaxHeight(),
-                    alignment = Alignment.CenterEnd
+                    alignment = Alignment.CenterEnd,
+                    side = StripSide.Right
                 )
             }
         } else {
             Column(Modifier.fillMaxSize()) {
-                // Top tappable strip
                 CounterTapStrip(
                     plus = topIsPlus,
                     onIncrement = { delta ->
-                        val currentType = viewModel.uiState.value.players
-                            .first { it.id == player.id }.activeCounter
-                        viewModel.incrementCounter(player.id, currentType, delta)
+                        viewModel.incrementCounter(player.id, currentType(), delta)
                     },
                     modifier = Modifier
-                        .height(72.dp)
+                        .height(UiDefaults.STRIP_THICKNESS_DP)
                         .fillMaxWidth(),
-                    alignment = Alignment.Center
+                    alignment = Alignment.Center,
+                    side = StripSide.Top
                 )
 
-                // Center swipe area
                 CounterSwipeArea(player, viewModel, angle, Modifier.weight(1f))
 
-                // Bottom tappable strip
                 CounterTapStrip(
                     plus = !topIsPlus,
                     onIncrement = { delta ->
-                        val currentType = viewModel.uiState.value.players
-                            .first { it.id == player.id }.activeCounter
-                        viewModel.incrementCounter(player.id, currentType, delta)
+                        viewModel.incrementCounter(player.id, currentType(), delta)
                     },
                     modifier = Modifier
-                        .height(72.dp)
+                        .height(UiDefaults.STRIP_THICKNESS_DP)
                         .fillMaxWidth(),
-                    alignment = Alignment.Center
+                    alignment = Alignment.Center,
+                    side = StripSide.Bottom
                 )
             }
         }
@@ -137,19 +165,116 @@ private fun CounterTapStrip(
     plus: Boolean,
     onIncrement: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    alignment: Alignment = Alignment.Center
+    alignment: Alignment = Alignment.Center,
+    side: StripSide
 ) {
+    val scope = rememberCoroutineScope()
+    val alpha = remember { Animatable(0f) }
+
     Box(
-        modifier = modifier.pointerInput(Unit) {
-            detectTapGestures { onIncrement(if (plus) +1 else -1) }
+        modifier = modifier.pointerInput(plus, side) {
+            detectTapGestures(
+                onTap = {
+                    // animate flash on this strip only
+                    scope.launch {
+                        alpha.snapTo(UiDefaults.FLASH_MAX_ALPHA)
+                        alpha.animateTo(
+                            targetValue = 0f,
+                            animationSpec = tween(
+                                durationMillis = UiDefaults.FLASH_DURATION_MS,
+                                easing = FastOutSlowInEasing
+                            )
+                        )
+                    }
+                    onIncrement(if (plus) +1 else -1)
+                }
+            )
         },
         contentAlignment = alignment
     ) {
+        // Content (+ / – sign)
         Text(
             if (plus) "+" else "–",
             fontSize = 56.sp,
-            color = Color.Black.copy(alpha = 0.25f)
+            color = Color.Black.copy(alpha = UiDefaults.SYMBOL_ALPHA)
         )
+
+        // Directional flash overlay (inner edge near the HP number is brightest)
+        StripFlashOverlay(alpha = alpha.value, side = side)
+    }
+}
+
+@Composable
+private fun StripFlashOverlay(alpha: Float, side: StripSide) {
+    if (alpha <= 0f) return
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val strong = Color.White.copy(alpha = alpha)          // inner edge (near HP)
+        val mid    = Color.White.copy(alpha = alpha * 0.35f)  // middle
+        val none   = Color.Transparent                         // outer edge
+
+        when (side) {
+            StripSide.Left -> {
+                // Inner edge is RIGHT (toward center). Fade from right → left.
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0f to none,
+                            0.6f to mid,
+                            1f to strong
+                        ),
+                        startX = 0f,
+                        endX = size.width
+                    ),
+                    size = size
+                )
+            }
+            StripSide.Right -> {
+                // Inner edge is LEFT (toward center). Fade from left → right.
+                drawRect(
+                    brush = Brush.horizontalGradient(
+                        colorStops = arrayOf(
+                            0f to strong,
+                            0.4f to mid,
+                            1f to none
+                        ),
+                        startX = 0f,
+                        endX = size.width
+                    ),
+                    size = size
+                )
+            }
+            StripSide.Top -> {
+                // Inner edge is BOTTOM. Fade from bottom → top.
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0f to none,
+                            0.6f to mid,
+                            1f to strong
+                        ),
+                        startY = 0f,
+                        endY = size.height
+                    ),
+                    size = size
+                )
+            }
+            StripSide.Bottom -> {
+                // Inner edge is TOP. Fade from top → bottom.
+                drawRect(
+                    brush = Brush.verticalGradient(
+                        colorStops = arrayOf(
+                            0f to strong,
+                            0.4f to mid,
+                            1f to none
+                        ),
+                        startY = 0f,
+                        endY = size.height
+                    ),
+                    size = size
+                )
+            }
+        }
     }
 }
 
@@ -169,9 +294,21 @@ private fun CounterSwipeArea(
         contentAlignment = Alignment.Center
     ) {
         val uiState by viewModel.uiState.collectAsState()
-        val currentPlayer = uiState.players.firstOrNull { it.id == player.id }
-        val value = currentPlayer?.counters?.get(currentPlayer.activeCounter) ?: 0
-        val counterType = currentPlayer?.activeCounter ?: CounterType.LIFE
+
+        // Compute both values using derivedStateOf directly from uiState
+        val counterType by remember(uiState, player.id) {
+            derivedStateOf {
+                uiState.players.firstOrNull { it.id == player.id }?.activeCounter
+                    ?: CounterType.LIFE
+            }
+        }
+
+        val value by remember(uiState, player.id, counterType) {
+            derivedStateOf {
+                val cp = uiState.players.firstOrNull { it.id == player.id }
+                cp?.counters?.get(counterType) ?: 0
+            }
+        }
 
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -187,9 +324,9 @@ private fun CounterSwipeArea(
     }
 }
 
-
 // -------------------- UTILITY --------------------
 
+/** Snap any float angle to one of 0/90/180/270, tolerant to small float errors. */
 private fun normalizedAngle(rotationAngle: Float): Float {
     val a = ((rotationAngle % 360) + 360) % 360
     return when {
@@ -199,8 +336,6 @@ private fun normalizedAngle(rotationAngle: Float): Float {
         else -> 270f
     }
 }
-
-
 
 // #################### HELPER FUNCTIONS ####################
 
@@ -231,18 +366,18 @@ suspend fun PointerInputScope.detectCounterSwipe(
                 change.consume()
             }
 
-            // **Query the latest active counter from ViewModel**
             val currentType = viewModel.uiState.value.players
                 .firstOrNull { it.id == playerId }?.activeCounter
                 ?: CounterType.LIFE
 
-            if (acc < -60f) viewModel.switchCounter(playerId, nextCounter(currentType))
-            else if (acc > 60f) viewModel.switchCounter(playerId, prevCounter(currentType))
+            if (acc < -UiDefaults.SWIPE_THRESHOLD) {
+                viewModel.switchCounter(playerId, nextCounter(currentType))
+            } else if (acc > UiDefaults.SWIPE_THRESHOLD) {
+                viewModel.switchCounter(playerId, prevCounter(currentType))
+            }
         }
     }
 }
-
-
 
 // --- Counter cycling helpers ---
 fun nextCounter(t: CounterType): CounterType {
@@ -253,4 +388,21 @@ fun nextCounter(t: CounterType): CounterType {
 fun prevCounter(t: CounterType): CounterType {
     val arr = CounterType.values()
     return arr[(t.ordinal - 1 + arr.size) % arr.size]
+}
+
+/* -------------------- PREVIEW (optional) -------------------- */
+
+@Preview(showBackground = true, widthDp = 360, heightDp = 200)
+@Composable
+@SuppressLint("ViewModelConstructorInComposition") // preview-only
+private fun PlayerCardPreview() {
+    // Keep preview self-contained. Construct once via remember.
+    val vm = remember {
+        LifeCounterViewModel().apply { setPlayers(2) }
+    }
+    val ui by vm.uiState.collectAsState()
+    val player = ui.players.firstOrNull()
+        ?: PlayerState(id = 0, color = Color(0xFF64B5F6))
+
+    PlayerCard(player = player, viewModel = vm, rotationAngle = 0f)
 }
