@@ -4,13 +4,21 @@ import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
-import kotlin.random.Random
+
+enum class RandomizerMode { HOME, PACKS, D4, D6, D8, D12, D20 }
 
 data class RandomizerUiState(
+    val mode: RandomizerMode = RandomizerMode.HOME,
+
+    // Pack randomizer
     val totalPacks: String = "24",
     val packsToPick: String = "8",
     val result: List<Int> = emptyList(),
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+
+    // Dice
+    val lastRoll: Int? = null,
+    val rollHistory: List<Int> = emptyList()
 )
 
 class RandomizerViewModel : ViewModel() {
@@ -18,36 +26,36 @@ class RandomizerViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(RandomizerUiState())
     val uiState: StateFlow<RandomizerUiState> = _uiState
 
-    fun updateTotalPacks(value: String) {
-        _uiState.update { it.copy(totalPacks = value) }
+    // ---------- Navigation ----------
+    fun setMode(mode: RandomizerMode) {
+        _uiState.update { it.copy(mode = mode) }
     }
 
-    fun updatePacksToPick(value: String) {
-        _uiState.update { it.copy(packsToPick = value) }
-    }
+    // ---------- Packs ----------
+    fun updateTotalPacks(value: String) = _uiState.update { it.copy(totalPacks = value) }
+    fun updatePacksToPick(value: String) = _uiState.update { it.copy(packsToPick = value) }
 
-    fun pickPacks() {
+    fun pickPacksReducingMax() {
         val total = _uiState.value.totalPacks.toIntOrNull()
         val count = _uiState.value.packsToPick.toIntOrNull()
 
-        if (total == null || count == null || count > total || count <= 0) {
-            _uiState.update { it.copy(errorMessage = "Invalid input", result = emptyList()) }
+        if (total == null || count == null || total <= 0 || count <= 0) {
+            _uiState.update { it.copy(errorMessage = "Please enter valid positive numbers", result = emptyList()) }
+            return
+        }
+        if (count > total) {
+            _uiState.update { it.copy(errorMessage = "Packs to pick cannot exceed total packs", result = emptyList()) }
             return
         }
 
-        val packPool = (1..total).toMutableList()
-        val result = List(count) {
-            val index = Random.nextInt(packPool.size)
-            packPool.removeAt(index)
+        val picked = mutableListOf<Int>()
+        var currentMax = total
+        repeat(count) {
+            val number = (1..currentMax).random()
+            picked.add(number)
+            currentMax--
         }
-
-        _uiState.update { it.copy(result = result, errorMessage = null) }
-    }
-
-    fun reset() {
-        _uiState.update {
-            it.copy(result = emptyList(), errorMessage = null)
-        }
+        _uiState.update { it.copy(result = picked, errorMessage = null) }
     }
 
     fun applyPreset(total: Int, pick: Int) {
@@ -62,39 +70,23 @@ class RandomizerViewModel : ViewModel() {
         pickPacksReducingMax()
     }
 
+    fun resetPacks() {
+        _uiState.update { it.copy(result = emptyList(), errorMessage = null) }
+    }
 
-    fun pickPacksReducingMax() {
-        val total = _uiState.value.totalPacks.toIntOrNull()
-        val count = _uiState.value.packsToPick.toIntOrNull()
-
-        if (total == null || count == null || total <= 0 || count <= 0) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "Please enter valid positive numbers",
-                result = emptyList()
+    // ---------- Dice ----------
+    fun rollDie(sides: Int) {
+        require(sides > 0)
+        val roll = (1..sides).random()
+        _uiState.update {
+            it.copy(
+                lastRoll = roll,
+                rollHistory = (it.rollHistory + roll).takeLast(20)
             )
-            return
         }
+    }
 
-        if (count > total) {
-            _uiState.value = _uiState.value.copy(
-                errorMessage = "Packs to pick cannot exceed total packs",
-                result = emptyList()
-            )
-            return
-        }
-
-        val picked = mutableListOf<Int>()
-        var currentMax = total
-
-        repeat(count) {
-            val number = (1..currentMax).random()
-            picked.add(number)
-            currentMax-- // Reduce the range for the next pick
-        }
-
-        _uiState.value = _uiState.value.copy(
-            result = picked,
-            errorMessage = null
-        )
+    fun clearDice() {
+        _uiState.update { it.copy(lastRoll = null, rollHistory = emptyList()) }
     }
 }
