@@ -38,11 +38,12 @@ fun RandomizerScreen(viewModel: RandomizerViewModel = viewModel()) {
     when (state.mode) {
         RandomizerMode.HOME -> RandomizerHome(
             tiles = listOf(
-                RandomizerTile("D4",  RandomizerMode.D4,  R.drawable.randomizer_d4),
-                RandomizerTile("D6",  RandomizerMode.D6,  R.drawable.randomizer_d6),
-                RandomizerTile("D8",  RandomizerMode.D8,  R.drawable.randomizer_d8),
-                RandomizerTile("D12", RandomizerMode.D12, R.drawable.randomizer_d12),
-                RandomizerTile("D20", RandomizerMode.D20, R.drawable.randomizer_d20),
+                RandomizerTile("D4",    RandomizerMode.D4,    R.drawable.randomizer_d4),
+                RandomizerTile("D6",    RandomizerMode.D6,    R.drawable.randomizer_d6),
+                RandomizerTile("D8",    RandomizerMode.D8,    R.drawable.randomizer_d8),
+                RandomizerTile("D12",   RandomizerMode.D12,   R.drawable.randomizer_d12),
+                RandomizerTile("D20",   RandomizerMode.D20,   R.drawable.randomizer_d20),
+                RandomizerTile("2×D6",  RandomizerMode.D6X6,  R.drawable.randomizer_d6x6),
                 RandomizerTile("Packs", RandomizerMode.PACKS, R.drawable.randomizer_pack)
             ),
             onSelect = { viewModel.setMode(it) }
@@ -58,11 +59,34 @@ fun RandomizerScreen(viewModel: RandomizerViewModel = viewModel()) {
             onPreset = viewModel::applyPreset
         )
 
-        RandomizerMode.D4  -> DiceScreen(4,  state.lastRoll, state.rollHistory, onBack = { viewModel.setMode(RandomizerMode.HOME) }, onRoll = { viewModel.rollDie(4) }, onClear = viewModel::clearDice)
-        RandomizerMode.D6  -> DiceScreen(6,  state.lastRoll, state.rollHistory, onBack = { viewModel.setMode(RandomizerMode.HOME) }, onRoll = { viewModel.rollDie(6) }, onClear = viewModel::clearDice)
-        RandomizerMode.D8  -> DiceScreen(8,  state.lastRoll, state.rollHistory, onBack = { viewModel.setMode(RandomizerMode.HOME) }, onRoll = { viewModel.rollDie(8) }, onClear = viewModel::clearDice)
-        RandomizerMode.D12 -> DiceScreen(12, state.lastRoll, state.rollHistory, onBack = { viewModel.setMode(RandomizerMode.HOME) }, onRoll = { viewModel.rollDie(12) }, onClear = viewModel::clearDice)
-        RandomizerMode.D20 -> DiceScreen(20, state.lastRoll, state.rollHistory, onBack = { viewModel.setMode(RandomizerMode.HOME) }, onRoll = { viewModel.rollDie(20) }, onClear = viewModel::clearDice)
+        RandomizerMode.D4  -> DiceScreen(4,  state.lastRoll, state.rollHistory,
+            onBack = { viewModel.setMode(RandomizerMode.HOME) },
+            onRoll = { viewModel.rollDie(4) },  onClear = viewModel::clearDice)
+
+        RandomizerMode.D6  -> DiceScreen(6,  state.lastRoll, state.rollHistory,
+            onBack = { viewModel.setMode(RandomizerMode.HOME) },
+            onRoll = { viewModel.rollDie(6) },  onClear = viewModel::clearDice)
+
+        RandomizerMode.D8  -> DiceScreen(8,  state.lastRoll, state.rollHistory,
+            onBack = { viewModel.setMode(RandomizerMode.HOME) },
+            onRoll = { viewModel.rollDie(8) },  onClear = viewModel::clearDice)
+
+        RandomizerMode.D12 -> DiceScreen(12, state.lastRoll, state.rollHistory,
+            onBack = { viewModel.setMode(RandomizerMode.HOME) },
+            onRoll = { viewModel.rollDie(12) }, onClear = viewModel::clearDice)
+
+        RandomizerMode.D20 -> DiceScreen(20, state.lastRoll, state.rollHistory,
+            onBack = { viewModel.setMode(RandomizerMode.HOME) },
+            onRoll = { viewModel.rollDie(20) }, onClear = viewModel::clearDice)
+
+        RandomizerMode.D6X6 -> DicePairScreen(
+            sides = 6,
+            last = state.lastRoll2d6,
+            history = state.history2d6,
+            onBack = { viewModel.setMode(RandomizerMode.HOME) },
+            onRoll = { viewModel.roll2d6() },
+            onClear = { viewModel.clear2d6() }
+        )
     }
 }
 
@@ -140,7 +164,10 @@ private fun PackRandomizerScreen(
 
         Divider()
 
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text("Presets:")
             Row(horizontalArrangement = Arrangement.spacedBy(Ui.RowSpacing)) {
                 Button(onClick = { onPreset(24, 8) }) { Text("Draft 2P x4") }
@@ -170,7 +197,6 @@ private fun DiceScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(Ui.SectionSpacing)
     ) {
-        // Back + Title
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -191,9 +217,68 @@ private fun DiceScreen(
         }
 
         if (history.isNotEmpty()) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 Text("History (last ${history.size}):")
                 Text(history.joinToString(", "))
+            }
+        }
+    }
+}
+
+@Composable
+private fun DicePairScreen(
+    sides: Int,
+    last: Pair<Int, Int>?,
+    history: List<Pair<Int, Int>>,
+    onBack: () -> Unit,
+    onRoll: () -> Unit,
+    onClear: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(Ui.ScreenPadding),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Ui.SectionSpacing)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            OutlinedButton(onClick = onBack) { Text("← Back") }
+            Text("2 × d$sides")
+            Spacer(Modifier.width(1.dp))
+        }
+
+        val a = last?.first
+        val b = last?.second
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                Text(text = a?.toString() ?: "—", fontSize = 56.sp)
+                Text(text = b?.toString() ?: "—", fontSize = 56.sp)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(text = if (a != null && b != null) "Total: ${a + b}" else "Total: —", fontSize = 20.sp)
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(Ui.RowSpacing)) {
+            Button(onClick = onRoll) { Text("Roll") }
+            if (history.isNotEmpty()) {
+                Button(onClick = onClear) { Text("Clear") }
+            }
+        }
+
+        if (history.isNotEmpty()) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text("History (last ${history.size}):")
+                Text(history.joinToString(", ") { "${it.first}+${it.second}=${it.first + it.second}" })
             }
         }
     }
