@@ -7,7 +7,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.pumpkinprod.ludopax.Routes
-import com.pumpkinprod.ludopax.lifecounter.ui.LifeCounterScreen
+import com.pumpkinprod.ludopax.lifecounter.ui.screen.LifeCounterScreen
 import com.pumpkinprod.ludopax.lifecounter.viewmodel.LifeCounterViewModel
 import com.pumpkinprod.ludopax.pod.PodScreen
 import com.pumpkinprod.ludopax.pod.PodViewModel
@@ -27,7 +27,7 @@ object AppScreens {
 
         NavHost(
             navController = navController,
-            startDestination = Routes.RANDOMIZER,
+            startDestination = Routes.LIFE_COUNTER,
             modifier = modifier
         ) {
             composable(Routes.LIFE_COUNTER) {

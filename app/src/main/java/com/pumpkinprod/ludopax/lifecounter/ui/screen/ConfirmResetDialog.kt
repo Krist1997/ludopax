@@ -1,4 +1,4 @@
-package com.pumpkinprod.ludopax.lifecounter.ui
+package com.pumpkinprod.ludopax.lifecounter.ui.screen
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text

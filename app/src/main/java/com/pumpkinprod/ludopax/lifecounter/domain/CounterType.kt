@@ -1,4 +1,4 @@
-package com.pumpkinprod.ludopax.lifecounter.model
+package com.pumpkinprod.ludopax.lifecounter.domain
 
 enum class CounterType(val label: String) {
     LIFE("Life Points"),

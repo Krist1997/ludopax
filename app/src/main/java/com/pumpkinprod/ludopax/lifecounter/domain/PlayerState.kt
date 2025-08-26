@@ -1,4 +1,4 @@
-package com.pumpkinprod.ludopax.lifecounter.model
+package com.pumpkinprod.ludopax.lifecounter.domain
 
 import androidx.compose.ui.graphics.Color
 

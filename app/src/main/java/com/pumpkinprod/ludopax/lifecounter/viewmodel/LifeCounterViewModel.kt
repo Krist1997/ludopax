@@ -2,9 +2,9 @@ package com.pumpkinprod.ludopax.lifecounter.viewmodel
 
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
-import com.pumpkinprod.ludopax.lifecounter.model.CounterType
-import com.pumpkinprod.ludopax.lifecounter.model.LifeUiState
-import com.pumpkinprod.ludopax.lifecounter.model.PlayerState
+import com.pumpkinprod.ludopax.lifecounter.domain.CounterType
+import com.pumpkinprod.ludopax.lifecounter.ui.state.LifeUiState
+import com.pumpkinprod.ludopax.lifecounter.domain.PlayerState
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

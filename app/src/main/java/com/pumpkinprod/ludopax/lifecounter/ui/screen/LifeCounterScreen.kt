@@ -1,4 +1,4 @@
-package com.pumpkinprod.ludopax.lifecounter.ui
+package com.pumpkinprod.ludopax.lifecounter.ui.screen
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import com.pumpkinprod.ludopax.lifecounter.ui.component.grid.PlayerGrid
 import com.pumpkinprod.ludopax.lifecounter.viewmodel.LifeCounterViewModel
 
 @Composable
@@ -18,15 +19,10 @@ fun LifeCounterScreen(vm: LifeCounterViewModel) {
         PlayerSelection(vm = vm)
     } else {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Player grid
+            // Player grid (now only needs players + viewModel)
             PlayerGrid(
                 players = players,
-                onIncrement = { player, type, delta ->
-                    vm.incrementCounter(player.id, type, delta)
-                },
-                onSwitchCounter = { player, type ->
-                    vm.switchCounter(player.id, type)
-                }
+                viewModel = vm
             )
 
             // Life counter menu
