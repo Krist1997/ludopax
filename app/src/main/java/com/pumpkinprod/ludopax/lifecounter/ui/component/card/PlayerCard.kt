@@ -65,7 +65,10 @@ fun PlayerCardContent(
                 CounterTapStrip(
                     plus = leftIsPlus,
                     onIncrement = { delta ->
-                        viewModel.incrementCounter(player.id, player.activeCounter, delta)
+                        // always fetch the current active counter
+                        val currentType = viewModel.uiState.value.players
+                            .first { it.id == player.id }.activeCounter
+                        viewModel.incrementCounter(player.id, currentType, delta)
                     },
                     modifier = Modifier
                         .width(72.dp)
@@ -80,7 +83,9 @@ fun PlayerCardContent(
                 CounterTapStrip(
                     plus = !leftIsPlus,
                     onIncrement = { delta ->
-                        viewModel.incrementCounter(player.id, player.activeCounter, delta)
+                        val currentType = viewModel.uiState.value.players
+                            .first { it.id == player.id }.activeCounter
+                        viewModel.incrementCounter(player.id, currentType, delta)
                     },
                     modifier = Modifier
                         .width(72.dp)
@@ -94,7 +99,9 @@ fun PlayerCardContent(
                 CounterTapStrip(
                     plus = topIsPlus,
                     onIncrement = { delta ->
-                        viewModel.incrementCounter(player.id, player.activeCounter, delta)
+                        val currentType = viewModel.uiState.value.players
+                            .first { it.id == player.id }.activeCounter
+                        viewModel.incrementCounter(player.id, currentType, delta)
                     },
                     modifier = Modifier
                         .height(72.dp)
@@ -109,7 +116,9 @@ fun PlayerCardContent(
                 CounterTapStrip(
                     plus = !topIsPlus,
                     onIncrement = { delta ->
-                        viewModel.incrementCounter(player.id, player.activeCounter, delta)
+                        val currentType = viewModel.uiState.value.players
+                            .first { it.id == player.id }.activeCounter
+                        viewModel.incrementCounter(player.id, currentType, delta)
                     },
                     modifier = Modifier
                         .height(72.dp)
