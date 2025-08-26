@@ -7,14 +7,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.pumpkinprod.ludopax.Routes
+import com.pumpkinprod.ludopax.dungeon.DungeonScreen
+import com.pumpkinprod.ludopax.dungeon.DungeonViewModel
 import com.pumpkinprod.ludopax.lifecounter.ui.screen.LifeCounterScreen
 import com.pumpkinprod.ludopax.lifecounter.viewmodel.LifeCounterViewModel
 import com.pumpkinprod.ludopax.pod.PodScreen
 import com.pumpkinprod.ludopax.pod.PodViewModel
 import com.pumpkinprod.ludopax.randomizer.RandomizerScreen
 import com.pumpkinprod.ludopax.randomizer.RandomizerViewModel
-import com.pumpkinprod.ludopax.dungeon.UndercityScreen
-import com.pumpkinprod.ludopax.dungeon.DungeonViewModel
 
 object AppScreens {
 
@@ -35,7 +35,7 @@ object AppScreens {
             }
 
             composable(Routes.UNDERCITY) {
-                UndercityScreen(viewModel = dungeonViewModel)
+                DungeonScreen(viewModel = dungeonViewModel)
             }
 
             composable(Routes.PODS) {
