@@ -46,12 +46,17 @@ import kotlin.math.abs
 
 private object UiDefaults {
     const val SWIPE_THRESHOLD = 60f
-    val STRIP_THICKNESS_DP = 72.dp
     const val SYMBOL_ALPHA = 0.25f
 
     // Flash animation (strip-only overlay)
     const val FLASH_MAX_ALPHA = 0.55f
     const val FLASH_DURATION_MS = 220
+
+    // Separate sizes for both directions:
+    // - Left/Right strips use width
+    // - Top/Bottom strips use height
+    val STRIP_WIDTH_DP = 120.dp   // ← tweak to make side strips wider
+    val STRIP_HEIGHT_DP = 90.dp  // ← tweak to make top/bottom strips taller
 }
 
 private enum class StripSide { Left, Right, Top, Bottom }
@@ -106,7 +111,7 @@ fun PlayerCardContent(
                         viewModel.incrementCounter(player.id, currentType(), delta)
                     },
                     modifier = Modifier
-                        .width(UiDefaults.STRIP_THICKNESS_DP)
+                        .width(UiDefaults.STRIP_WIDTH_DP)   // ← side strips use width
                         .fillMaxHeight(),
                     alignment = Alignment.CenterStart,
                     side = StripSide.Left
@@ -120,7 +125,7 @@ fun PlayerCardContent(
                         viewModel.incrementCounter(player.id, currentType(), delta)
                     },
                     modifier = Modifier
-                        .width(UiDefaults.STRIP_THICKNESS_DP)
+                        .width(UiDefaults.STRIP_WIDTH_DP)   // ← side strips use width
                         .fillMaxHeight(),
                     alignment = Alignment.CenterEnd,
                     side = StripSide.Right
@@ -134,7 +139,7 @@ fun PlayerCardContent(
                         viewModel.incrementCounter(player.id, currentType(), delta)
                     },
                     modifier = Modifier
-                        .height(UiDefaults.STRIP_THICKNESS_DP)
+                        .height(UiDefaults.STRIP_HEIGHT_DP) // ← top/bottom use height
                         .fillMaxWidth(),
                     alignment = Alignment.Center,
                     side = StripSide.Top
@@ -148,7 +153,7 @@ fun PlayerCardContent(
                         viewModel.incrementCounter(player.id, currentType(), delta)
                     },
                     modifier = Modifier
-                        .height(UiDefaults.STRIP_THICKNESS_DP)
+                        .height(UiDefaults.STRIP_HEIGHT_DP) // ← top/bottom use height
                         .fillMaxWidth(),
                     alignment = Alignment.Center,
                     side = StripSide.Bottom
@@ -396,7 +401,6 @@ fun prevCounter(t: CounterType): CounterType {
 @Composable
 @SuppressLint("ViewModelConstructorInComposition") // preview-only
 private fun PlayerCardPreview() {
-    // Keep preview self-contained. Construct once via remember.
     val vm = remember {
         LifeCounterViewModel().apply { setPlayers(2) }
     }
