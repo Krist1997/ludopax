@@ -38,12 +38,14 @@ fun PlayerGrid(
                 )
             }
         }
+
         4 -> {
             Column(Modifier.fillMaxSize()) {
                 PlayerRow(players.subList(0, 2), viewModel, players.size, 0)
                 PlayerRow(players.subList(2, 4), viewModel, players.size, 2)
             }
         }
+
         5 -> {
             Column(Modifier.fillMaxSize()) {
                 PlayerCard(
@@ -58,6 +60,7 @@ fun PlayerGrid(
                 PlayerRow(players.subList(3, 5), viewModel, players.size, 3)
             }
         }
+
         6 -> {
             Column(Modifier.fillMaxSize()) {
                 var start = 0
@@ -67,6 +70,7 @@ fun PlayerGrid(
                 }
             }
         }
+
         else -> PlayerColumn(players, viewModel)
     }
 }

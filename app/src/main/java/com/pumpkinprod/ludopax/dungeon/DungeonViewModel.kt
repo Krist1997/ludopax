@@ -16,7 +16,10 @@ import kotlinx.coroutines.flow.update
 
 enum class DungeonType(val label: String, @DrawableRes val imageRes: Int) {
     UNDERCITY("Undercity", R.drawable.dungeons_undercity),
-    BALDURS_GATE_WILDERNESS("Baldur's Gate Wilderness", R.drawable.dungeons_baldurs_gate_wilderness),
+    BALDURS_GATE_WILDERNESS(
+        "Baldur's Gate Wilderness",
+        R.drawable.dungeons_baldurs_gate_wilderness
+    ),
     DUNGEON_OF_THE_MAD_MAGE("Dungeon of the Mad Mage", R.drawable.dungeons_dungeon_of_the_mad_mage),
     LOST_MINE_OF_PHANDELVER("Lost Mine of Phandelver", R.drawable.dungeons_lost_mine_of_phandelver),
     TOMB_OF_ANNIHILATION("Tomb of Annihilation", R.drawable.dungeons_tomb_of_annihilation);

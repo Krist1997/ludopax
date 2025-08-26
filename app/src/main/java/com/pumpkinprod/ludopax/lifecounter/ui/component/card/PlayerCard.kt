@@ -215,8 +215,8 @@ private fun StripFlashOverlay(alpha: Float, side: StripSide) {
 
     Canvas(modifier = Modifier.fillMaxSize()) {
         val strong = Color.White.copy(alpha = alpha)          // inner edge (near HP)
-        val mid    = Color.White.copy(alpha = alpha * 0.35f)  // middle
-        val none   = Color.Transparent                         // outer edge
+        val mid = Color.White.copy(alpha = alpha * 0.35f)  // middle
+        val none = Color.Transparent                         // outer edge
 
         when (side) {
             StripSide.Left -> {
@@ -234,6 +234,7 @@ private fun StripFlashOverlay(alpha: Float, side: StripSide) {
                     size = size
                 )
             }
+
             StripSide.Right -> {
                 // Inner edge is LEFT (toward center). Fade from left → right.
                 drawRect(
@@ -249,6 +250,7 @@ private fun StripFlashOverlay(alpha: Float, side: StripSide) {
                     size = size
                 )
             }
+
             StripSide.Top -> {
                 // Inner edge is BOTTOM. Fade from bottom → top.
                 drawRect(
@@ -264,6 +266,7 @@ private fun StripFlashOverlay(alpha: Float, side: StripSide) {
                     size = size
                 )
             }
+
             StripSide.Bottom -> {
                 // Inner edge is TOP. Fade from top → bottom.
                 drawRect(
