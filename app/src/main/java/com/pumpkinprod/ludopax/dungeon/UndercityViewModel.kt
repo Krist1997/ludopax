@@ -1,4 +1,4 @@
-package com.pumpkinprod.ludopax.undercity
+package com.pumpkinprod.ludopax.dungeon
 
 import androidx.compose.ui.geometry.Offset
 import androidx.lifecycle.ViewModel

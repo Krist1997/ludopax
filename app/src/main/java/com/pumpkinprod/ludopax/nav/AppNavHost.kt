@@ -13,8 +13,8 @@ import com.pumpkinprod.ludopax.pod.PodScreen
 import com.pumpkinprod.ludopax.pod.PodViewModel
 import com.pumpkinprod.ludopax.randomizer.RandomizerScreen
 import com.pumpkinprod.ludopax.randomizer.RandomizerViewModel
-import com.pumpkinprod.ludopax.undercity.UndercityScreen
-import com.pumpkinprod.ludopax.undercity.UndercityViewModel
+import com.pumpkinprod.ludopax.dungeon.UndercityScreen
+import com.pumpkinprod.ludopax.dungeon.UndercityViewModel
 
 object AppScreens {
 

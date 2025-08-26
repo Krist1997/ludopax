@@ -1,4 +1,4 @@
-package com.pumpkinprod.ludopax.undercity
+package com.pumpkinprod.ludopax.dungeon
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGestures
