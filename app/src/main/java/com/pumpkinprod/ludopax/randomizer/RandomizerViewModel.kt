@@ -5,7 +5,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
 
-enum class RandomizerMode { HOME, PACKS, D4, D6, D8, D12, D20, D6X6 }
+enum class RandomizerMode { HOME, PACKS, D4, D6, D8, D12, D20, D6PLUS6 }
 
 data class RandomizerUiState(
     // Navigation

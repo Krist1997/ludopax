@@ -43,7 +43,7 @@ fun RandomizerScreen(viewModel: RandomizerViewModel = viewModel()) {
                 RandomizerTile("D8",    RandomizerMode.D8,    R.drawable.randomizer_d8),
                 RandomizerTile("D12",   RandomizerMode.D12,   R.drawable.randomizer_d12),
                 RandomizerTile("D20",   RandomizerMode.D20,   R.drawable.randomizer_d20),
-                RandomizerTile("2×D6",  RandomizerMode.D6X6,  R.drawable.randomizer_d6plusd6),
+                RandomizerTile("2×D6",  RandomizerMode.D6PLUS6,  R.drawable.randomizer_d6plusd6),
                 RandomizerTile("Packs", RandomizerMode.PACKS, R.drawable.randomizer_pack)
             ),
             onSelect = { viewModel.setMode(it) }
@@ -79,7 +79,7 @@ fun RandomizerScreen(viewModel: RandomizerViewModel = viewModel()) {
             onBack = { viewModel.setMode(RandomizerMode.HOME) },
             onRoll = { viewModel.rollDie(20) }, onClear = viewModel::clearDice)
 
-        RandomizerMode.D6X6 -> DicePairScreen(
+        RandomizerMode.D6PLUS6 -> DicePairScreen(
             sides = 6,
             last = state.lastRoll2d6,
             history = state.history2d6,
