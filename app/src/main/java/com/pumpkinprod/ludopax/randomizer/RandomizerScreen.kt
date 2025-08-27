@@ -43,7 +43,7 @@ fun RandomizerScreen(viewModel: RandomizerViewModel = viewModel()) {
                 RandomizerTile("D8",    RandomizerMode.D8,    R.drawable.randomizer_d8),
                 RandomizerTile("D12",   RandomizerMode.D12,   R.drawable.randomizer_d12),
                 RandomizerTile("D20",   RandomizerMode.D20,   R.drawable.randomizer_d20),
-                RandomizerTile("2×D6",  RandomizerMode.D6X6,  R.drawable.randomizer_d6x6),
+                RandomizerTile("2×D6",  RandomizerMode.D6X6,  R.drawable.randomizer_d6plusd6),
                 RandomizerTile("Packs", RandomizerMode.PACKS, R.drawable.randomizer_pack)
             ),
             onSelect = { viewModel.setMode(it) }
