@@ -166,9 +166,10 @@ class PodViewModel : ViewModel() {
         _uiState.value = BracketUiState(
             players = players,
             matches = prelimMatches + round1Matches,
-            totalRounds = rFloor + 1,     // prelim + subsequent main rounds
+            totalRounds = rFloor,         // ✅ highest round number (final)
             isBracketStarted = true
         )
+
     }
 
     /**
