@@ -35,11 +35,14 @@ class PodViewModel : ViewModel() {
         if (players.isEmpty()) return
 
         val rounds = ceil(log2(players.size.toDouble())).toInt()
-        val paddedPlayers = players + List((1 shl rounds) - players.size) {
-            Player(-1, "BYE")
-        }
+        val totalSlots = 1 shl rounds
 
-        val firstRoundMatches = paddedPlayers.chunked(2).mapIndexed { i, pair ->
+        // Create the full list of slots (players + BYEs) and shuffle it
+        val slots = (players + List(totalSlots - players.size) {
+            Player(-1, "BYE")
+        }).shuffled()
+
+        val firstRoundMatches = slots.chunked(2).mapIndexed { i, pair ->
             Match(
                 id = i,
                 round = 1,
@@ -56,6 +59,7 @@ class PodViewModel : ViewModel() {
         )
         history.clear()
     }
+
 
     /** Select winner and auto-advance */
     fun selectWinner(matchId: Int, winner: Player) {
