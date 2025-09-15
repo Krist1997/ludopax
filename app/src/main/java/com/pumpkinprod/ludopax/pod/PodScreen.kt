@@ -5,10 +5,15 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -38,7 +43,6 @@ fun PodScreen(viewModel: PodViewModel = viewModel()) {
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
-            .verticalScroll(rememberScrollState())
     ) {
         if (!uiState.isBracketStarted) {
             PlayerSetup(viewModel)
@@ -51,58 +55,76 @@ fun PodScreen(viewModel: PodViewModel = viewModel()) {
             Spacer(Modifier.height(16.dp))
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { viewModel.undo() }) {
-                    Text("Undo")
-                }
-                Button(onClick = { viewModel.reset() }) {
-                    Text("Reset")
-                }
+                Button(onClick = { viewModel.undo() }) { Text("Undo") }
+                Button(onClick = { viewModel.reset() }) { Text("Reset") }
             }
         }
     }
 }
+
 
 @Composable
 fun PlayerSetup(viewModel: PodViewModel) {
     var playerCount by remember { mutableStateOf(4) }
     val playerNames = remember { mutableStateListOf("", "", "", "") }
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text("Select number of players:")
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize(),
+        // 👇 IME padding lives *inside* the scrollable content to avoid the blank bar
+        contentPadding = WindowInsets.ime.asPaddingValues(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Top spacing equal to your original 16.dp screen padding
+        item { Spacer(Modifier.height(16.dp)) }
 
-        // simple dropdown or selectable options
-        val options = listOf(4, 6, 8, 10, 12)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            options.forEach { count ->
-                FilterChip(
-                    selected = playerCount == count,
-                    onClick = {
-                        playerCount = count
-                        while (playerNames.size < count) playerNames.add("")
-                        while (playerNames.size > count) playerNames.removeLast()
-                    },
-                    label = { Text("$count") }
-                )
+        item {
+            Text("Select number of players:")
+            val options = listOf(4, 6, 8, 10, 12)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                options.forEach { count ->
+                    FilterChip(
+                        selected = playerCount == count,
+                        onClick = {
+                            playerCount = count
+                            while (playerNames.size < count) playerNames.add("")
+                            while (playerNames.size > count) {
+                                playerNames.removeAt(playerNames.lastIndex)
+                            }
+                        },
+                        label = { Text("$count") }
+                    )
+                }
             }
         }
 
-        playerNames.forEachIndexed { i, name ->
+        items(playerNames.size) { i ->
             OutlinedTextField(
-                value = name,
+                value = playerNames[i],
                 onValueChange = { playerNames[i] = it },
                 label = { Text("Player ${i + 1}") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp) // match screen padding visually
             )
         }
 
-        Button(
-            onClick = { viewModel.setPlayers(playerNames); viewModel.startBracket() },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Start Bracket")
+        item {
+            Button(
+                onClick = { viewModel.setPlayers(playerNames); viewModel.startBracket() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp) // match screen padding visually
+            ) {
+                Text("Start Bracket")
+            }
         }
+
+        // Bottom spacer so last field/button isn’t glued to IME edge
+        item { Spacer(Modifier.height(16.dp)) }
     }
 }
+
 
 @Composable
 fun BracketView(
