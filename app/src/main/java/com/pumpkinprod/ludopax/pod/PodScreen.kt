@@ -40,21 +40,24 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.pumpkinprod.ludopax.pod.model.Player
+import com.pumpkinprod.ludopax.pod.model.SlotRef
 
 @Composable
 fun PodScreen(viewModel: PodViewModel = viewModel()) {
     val uiState by viewModel.uiState.collectAsState()
 
+    // Root container unchanged
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp) // keep your screen padding here
+            .padding(16.dp)
     ) {
         if (!uiState.isBracketStarted) {
-            // PlayerSetup already handles scroll + IME insets
             PlayerSetup(viewModel)
         } else {
-            // Make the bracket view scrollable
+            var swapMode by remember { mutableStateOf(false) }
+            var firstPick by remember { mutableStateOf<SlotRef?>(null) }
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -62,22 +65,47 @@ fun PodScreen(viewModel: PodViewModel = viewModel()) {
             ) {
                 BracketView(
                     matches = uiState.matches,
-                    onSelectWinner = { matchId, player -> viewModel.selectWinner(matchId, player) }
+                    swapMode = swapMode,
+                    selectedSlot = firstPick,
+                    onPickSlot = { slot ->
+                        if (!swapMode) return@BracketView
+                        if (firstPick == null) {
+                            firstPick = slot
+                        } else {
+                            val ok = viewModel.swapPlayers(firstPick!!, slot)
+                            firstPick = null
+                            // Optionally: show a snackbar if !ok
+                        }
+                    },
+                    onSelectWinner = { matchId, player ->
+                        if (!swapMode) viewModel.selectWinner(matchId, player)
+                    }
                 )
 
                 Spacer(Modifier.height(16.dp))
 
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { viewModel.undo() }) { Text("Undo") }
-                    Button(onClick = { viewModel.reset() }) { Text("Reset") }
+                    Button(onClick = { viewModel.undo() }, enabled = !swapMode) { Text("Undo") }
+                    Button(onClick = {
+                        firstPick = null
+                        swapMode = false
+                        viewModel.reset()
+                    }) { Text("Reset") }
+                    Button(onClick = {
+                        // Toggle swap mode; clear any pending selection
+                        if (swapMode) firstPick = null
+                        swapMode = !swapMode
+                    }) {
+                        Text(if (swapMode) "Done Swapping" else "Swap Players")
+                    }
                 }
 
-                // Small bottom spacer so buttons aren't glued to the edge / nav bar
                 Spacer(Modifier.height(16.dp))
             }
         }
     }
 }
+
 
 
 
@@ -154,6 +182,9 @@ fun PlayerSetup(viewModel: PodViewModel) {
 @Composable
 fun BracketView(
     matches: List<com.pumpkinprod.ludopax.pod.model.Match>,
+    swapMode: Boolean,
+    selectedSlot: SlotRef?,
+    onPickSlot: (SlotRef) -> Unit,
     onSelectWinner: (Int, Player) -> Unit
 ) {
     val grouped = matches.groupBy { it.round }
@@ -164,7 +195,13 @@ fun BracketView(
                 Text("Round $round", style = MaterialTheme.typography.titleMedium)
                 Spacer(Modifier.height(8.dp))
                 roundMatches.forEach { match ->
-                    MatchItem(match = match, onSelectWinner = onSelectWinner)
+                    MatchItem(
+                        match = match,
+                        swapMode = swapMode,
+                        selectedSlot = selectedSlot,
+                        onPickSlot = onPickSlot,
+                        onSelectWinner = onSelectWinner
+                    )
                 }
             }
         }
@@ -174,6 +211,9 @@ fun BracketView(
 @Composable
 fun MatchItem(
     match: com.pumpkinprod.ludopax.pod.model.Match,
+    swapMode: Boolean,
+    selectedSlot: SlotRef?,
+    onPickSlot: (SlotRef) -> Unit,
     onSelectWinner: (Int, Player) -> Unit
 ) {
     Column(
@@ -181,33 +221,49 @@ fun MatchItem(
             .fillMaxWidth()
             .padding(4.dp)
     ) {
-        PlayerItem(match.player1, match.winner, onClick = {
-            if (match.player1 != null && match.player1.id != -1) {
-                onSelectWinner(match.id, match.player1)
+        PlayerItem(
+            player = match.player1,
+            winner = match.winner,
+            selected = selectedSlot?.let { it.matchId == match.id && it.isPlayer1 } == true,
+            enabled = match.player1 != null && match.winner == null,
+            onClick = {
+                if (swapMode) onPickSlot(SlotRef(match.id, true))
+                else match.player1?.let { if (it.id != -1) onSelectWinner(match.id, it) }
             }
-        })
-        PlayerItem(match.player2, match.winner, onClick = {
-            if (match.player2 != null && match.player2.id != -1) {
-                onSelectWinner(match.id, match.player2)
+        )
+        PlayerItem(
+            player = match.player2,
+            winner = match.winner,
+            selected = selectedSlot?.let { it.matchId == match.id && !it.isPlayer1 } == true,
+            enabled = match.player2 != null && match.winner == null,
+            onClick = {
+                if (swapMode) onPickSlot(SlotRef(match.id, false))
+                else match.player2?.let { if (it.id != -1) onSelectWinner(match.id, it) }
             }
-        })
+        )
     }
 }
 
 @Composable
-fun PlayerItem(player: Player?, winner: Player?, onClick: () -> Unit) {
+fun PlayerItem(
+    player: Player?,
+    winner: Player?,
+    selected: Boolean,
+    enabled: Boolean,
+    onClick: () -> Unit
+) {
     val isWinner = player != null && winner?.id == player.id
-    val bg = if (isWinner) {
-        MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
-    } else {
-        MaterialTheme.colorScheme.surface
+    val bg = when {
+        selected -> MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f)
+        isWinner -> MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+        else -> MaterialTheme.colorScheme.surface
     }
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp)
-            .clickable(enabled = player != null && player.id != -1, onClick = onClick),
+            .clickable(enabled = enabled && player?.id != -1, onClick = onClick),
         color = bg,
         tonalElevation = if (isWinner) 2.dp else 0.dp,
         shape = MaterialTheme.shapes.small
@@ -219,3 +275,4 @@ fun PlayerItem(player: Player?, winner: Player?, onClick: () -> Unit) {
         )
     }
 }
+

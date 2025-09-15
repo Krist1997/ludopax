@@ -3,35 +3,64 @@ package com.pumpkinprod.ludopax.pod
 import androidx.lifecycle.ViewModel
 import com.pumpkinprod.ludopax.pod.model.Match
 import com.pumpkinprod.ludopax.pod.model.Player
+import com.pumpkinprod.ludopax.pod.model.SlotRef
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import java.util.Stack
+import kotlinx.coroutines.flow.asStateFlow
 import kotlin.math.ceil
+import kotlin.math.floor
 import kotlin.math.log2
 
+/**
+ * UI state for the bracket screen.
+ */
 data class BracketUiState(
     val players: List<Player> = emptyList(),
     val matches: List<Match> = emptyList(),
-    val totalRounds: Int = 1,
+    val totalRounds: Int = 1,          // Number of rounds including prelim (if any)
     val isBracketStarted: Boolean = false
 )
 
+/**
+ * Orchestrates bracket generation, progression, undo/redo, and slot swapping.
+ * Supports two paths:
+ * - Power-of-two player counts: regular Round 1 bracket.
+ * - Non-power-of-two: Round 0 "prelim" to trim field to the next lower power-of-two, then Round 1+.
+ */
 class PodViewModel : ViewModel() {
 
+    // --- Constants / ID scheme ---------------------------------------------------------------
+
+    private companion object {
+        /** Unique base to keep prelim (round 0) match ids from colliding with other rounds. */
+        const val PRELIM_ID_BASE: Int = 10_000
+    }
+
+    // --- State -------------------------------------------------------------------------------
+
     private val _uiState = MutableStateFlow(BracketUiState())
-    val uiState: StateFlow<BracketUiState> = _uiState
+    val uiState: StateFlow<BracketUiState> = _uiState.asStateFlow()
 
-    private val history = Stack<BracketUiState>() // For undo
+    /** Simple LIFO history for undo (stores immutable UI states). */
+    private val history = ArrayDeque<BracketUiState>()
 
-    /** Set players before generating bracket */
-    /** Set players before generating bracket */
+    /**
+     * Map: prelimMatchId -> (targetRound1MatchId, insertIntoPlayer1?)
+     * Used only while a bracket generated with prelims is active.
+     */
+    private val prelimRouting = mutableMapOf<Int, Pair<Int, Boolean>>()
+
+    // --- Public API --------------------------------------------------------------------------
+
+    /**
+     * Prepare the player list before generating a bracket.
+     * - Trims names, fills defaults, and de-duplicates by appending (2), (3), ...
+     */
     fun setPlayers(rawNames: List<String>) {
-        // Trim, drop empties, fill defaults, enforce uniqueness
         val cleaned = rawNames.mapIndexed { i, s ->
             val t = s.trim()
             if (t.isEmpty()) "Player ${i + 1}" else t
         }.let { list ->
-            // de-duplicate by appending (#) when needed
             val seen = mutableMapOf<String, Int>()
             list.map { n ->
                 val count = (seen[n] ?: 0) + 1
@@ -41,179 +70,241 @@ class PodViewModel : ViewModel() {
         }
 
         val players = cleaned.mapIndexed { i, name -> Player(i, name) }
-        _uiState.value = _uiState.value.copy(players = players, isBracketStarted = false)
+        _uiState.value = _uiState.value.copy(
+            players = players,
+            isBracketStarted = false,
+            matches = emptyList(),
+            totalRounds = 1
+        )
     }
 
-
-    /** Start a new bracket */
+    /**
+     * Generate a new bracket from current players.
+     * Power-of-two -> Round 1 only. Non-power-of-two -> Round 0 prelim + Round 1.
+     */
     fun startBracket() {
         val players = _uiState.value.players
         if (players.isEmpty()) return
 
-        val rounds = ceil(log2(players.size.toDouble())).toInt()
-        val totalSlots = 1 shl rounds
+        history.clear()
+        prelimRouting.clear()
 
-        // Players + BYEs, then shuffle to randomize pairings and BYE placement
-        val slots = (players + List(totalSlots - players.size) { Player(-1, "BYE") }).shuffled()
+        if (isPowerOfTwo(players.size)) {
+            val rounds = ceil(log2(players.size.toDouble())).toInt()
 
-        // Build round 1
-        val firstRoundMatches = slots.chunked(2).mapIndexed { i, pair ->
-            Match(
-                id = i,                 // round 1 ids: 0..(n/2 - 1)
-                round = 1,
-                player1 = pair.getOrNull(0),
-                player2 = pair.getOrNull(1)
+            val slots = players.shuffled()
+            val firstRound = slots.chunked(2).mapIndexed { i, pair ->
+                Match(
+                    id = i,             // Round 1 ids: 0..(n/2 - 1)
+                    round = 1,
+                    player1 = pair.getOrNull(0),
+                    player2 = pair.getOrNull(1)
+                )
+            }
+
+            _uiState.value = BracketUiState(
+                players = players,
+                matches = firstRound,
+                totalRounds = rounds,
+                isBracketStarted = true
             )
-        }.toMutableList()
+            return
+        }
 
-        // Auto-advance any BYEs (may create next-round matches)
-        autoAdvanceByes(firstRoundMatches, rounds)
+        // --- Play-in (prelim) plan for non-power-of-two -------------------------------------
+
+        val n = players.size
+        val rFloor = floor(log2(n.toDouble())).toInt()     // rounds after prelim
+        val mainSize = 1 shl rFloor                        // target size after prelim (power-of-two)
+        val prelimMatchesCount = n - mainSize              // # of prelim matches
+
+        val shuffled = players.shuffled()
+        val prelimPlayers = shuffled.take(prelimMatchesCount * 2)
+        val directPlayers = shuffled.drop(prelimMatchesCount * 2)
+
+        // Round 0: prelim matches
+        val prelimMatches = prelimPlayers
+            .chunked(2)
+            .mapIndexed { i, pair ->
+                Match(
+                    id = PRELIM_ID_BASE + i,
+                    round = 0,
+                    player1 = pair.getOrNull(0),
+                    player2 = pair.getOrNull(1)
+                )
+            }
+
+        // Round 1: allocate 'mainSize' slots, some reserved for prelim winners
+        val round1SlotsIndices = (0 until mainSize).shuffled()
+        val placeholderSlots = round1SlotsIndices.take(prelimMatchesCount)     // filled by prelim winners
+        val directSlots = (0 until mainSize).filter { it !in placeholderSlots }
+
+        val round1Slots = Array<Player?>(mainSize) { null }
+        directSlots.forEachIndexed { i, pos ->
+            round1Slots[pos] = directPlayers[i]
+        }
+
+        val round1Matches = round1Slots
+            .asList()
+            .chunked(2)
+            .mapIndexed { i, pair ->
+                Match(
+                    id = i,            // Round 1 ids: 0..(mainSize/2 - 1)
+                    round = 1,
+                    player1 = pair.getOrNull(0),
+                    player2 = pair.getOrNull(1)
+                )
+            }
+
+        // Map prelim winners to their Round 1 target slots
+        placeholderSlots.forEachIndexed { i, slotIndex ->
+            val targetMatchId = slotIndex / 2
+            val toPlayer1 = (slotIndex % 2 == 0)
+            prelimRouting[PRELIM_ID_BASE + i] = targetMatchId to toPlayer1
+        }
 
         _uiState.value = BracketUiState(
             players = players,
-            matches = firstRoundMatches,
-            totalRounds = rounds,
+            matches = prelimMatches + round1Matches,
+            totalRounds = rFloor + 1,     // prelim + subsequent main rounds
             isBracketStarted = true
         )
-        history.clear()
     }
 
+    /**
+     * Select a winner for a match and advance them to the next round.
+     * - Prelim winners are routed into their Round 1 slot.
+     * - Round 1+ winners advance based on id scheme (round*100 + index).
+     */
+    fun selectWinner(matchId: Int, winner: Player) {
+        pushHistory()
 
+        val state = _uiState.value
+        val matches = state.matches.toMutableList()
+        val idx = matches.indexOfFirst { it.id == matchId }
+        if (idx == -1) return
+        val match = matches[idx]
+        matches[idx] = match.copy(winner = winner)
+
+        // If this was a prelim, route into Round 1
+        prelimRouting[matchId]?.let { (targetId, toPlayer1) ->
+            upsertPlayerIntoMatch(
+                matches = matches,
+                matchId = targetId,
+                round = 1,
+                toPlayer1 = toPlayer1,
+                player = winner
+            )
+            _uiState.value = state.copy(matches = matches)
+            return
+        }
+
+        // Regular advancement for Round 1+
+        if (match.round < state.totalRounds) {
+            val nextId = nextMatchId(match)
+            val toP1 = (match.id % 2 == 0) // even id feeds player1, odd feeds player2
+            upsertPlayerIntoMatch(
+                matches = matches,
+                matchId = nextId,
+                round = match.round + 1,
+                toPlayer1 = toP1,
+                player = winner
+            )
+        }
+
+        _uiState.value = state.copy(matches = matches)
+    }
+
+    /** Undo the last winner selection. */
+    fun undo() {
+        if (history.isNotEmpty()) {
+            _uiState.value = history.removeLast()
+        }
+    }
+
+    /** Reset whole bracket (players list preserved? No: clean slate). */
+    fun reset() {
+        _uiState.value = BracketUiState()
+        history.clear()
+        prelimRouting.clear()
+    }
+
+    /**
+     * Swap two players' slots anywhere in the bracket **before any winner is chosen**.
+     * Returns true if swap succeeded.
+     */
+    fun swapPlayers(a: SlotRef, b: SlotRef): Boolean {
+        val state = _uiState.value
+        val matches = state.matches.toMutableList()
+
+        // Simplest/safest: block swaps after any progress
+        if (matches.any { it.winner != null }) return false
+
+        val aIdx = matches.indexOfFirst { it.id == a.matchId }
+        val bIdx = matches.indexOfFirst { it.id == b.matchId }
+        if (aIdx == -1 || bIdx == -1) return false
+
+        val ma = matches[aIdx]
+        val mb = matches[bIdx]
+
+        // Prevent swapping into a Round 1 placeholder reserved for a prelim winner
+        if (isPlaceholderSlot(a.matchId, a.isPlayer1) || isPlaceholderSlot(b.matchId, b.isPlayer1)) return false
+
+        val pa = if (a.isPlayer1) ma.player1 else ma.player2
+        val pb = if (b.isPlayer1) mb.player1 else mb.player2
+        if (pa == null || pb == null) return false
+
+        matches[aIdx] = if (a.isPlayer1) ma.copy(player1 = pb) else ma.copy(player2 = pb)
+        matches[bIdx] = if (b.isPlayer1) mb.copy(player1 = pa) else mb.copy(player2 = pa)
+
+        _uiState.value = state.copy(matches = matches)
+        return true
+    }
+
+    // --- Helpers -----------------------------------------------------------------------------
+
+    /** True if (id, side) is a Round 1 placeholder reserved for a prelim winner. */
+    private fun isPlaceholderSlot(matchId: Int, isPlayer1: Boolean): Boolean {
+        return prelimRouting.values.any { (targetId, toP1) ->
+            targetId == matchId && toP1 == isPlayer1
+        }
+    }
+
+    /** Compute the next match id using the current id scheme. */
     private fun nextMatchId(current: Match): Int {
         val nextRound = current.round + 1
         val nextIndex = current.id / 2
         return (nextRound * 100) + nextIndex
     }
 
-
-    /** Select winner and auto-advance */
-    fun selectWinner(matchId: Int, winner: Player) {
-        val state = _uiState.value
-        val matches = state.matches.toMutableList()
-        val idx = matches.indexOfFirst { it.id == matchId }
-        if (idx == -1) return
-
-        val match = matches[idx]
-        if (match.winner?.id == winner.id) return // no-op
-        if (match.player1 == null || match.player2 == null) return
-
-        history.push(state)
-        matches[idx] = match.copy(winner = winner)
-
-        if (match.round < state.totalRounds) {
-            val nextMatchId = nextMatchId(match)
-            val existing = matches.firstOrNull { it.id == nextMatchId }
-            val base = existing ?: Match(
-                id = nextMatchId, round = match.round + 1, player1 = null, player2 = null
-            )
-            val filled =
-                if (match.id % 2 == 0) base.copy(player1 = winner) else base.copy(player2 = winner)
-            if (existing == null) matches.add(filled) else matches[matches.indexOf(existing)] =
-                filled
-
-            // Optional: if the other slot is a BYE, auto-advance
-            autoAdvanceByes(matches, state.totalRounds)
-        }
-
-        _uiState.value = state.copy(matches = matches)
+    /** Push current UI state onto the undo stack. */
+    private fun pushHistory() {
+        history.addLast(_uiState.value)
     }
 
-
-    private fun autoAdvanceByes(
+    /** Insert or update a player into a given match/slot. Creates the match if missing. */
+    private fun upsertPlayerIntoMatch(
         matches: MutableList<Match>,
-        totalRounds: Int
+        matchId: Int,
+        round: Int,
+        toPlayer1: Boolean,
+        player: Player
     ) {
-        val BYE_ID = -1
-        var progressed: Boolean
-        do {
-            progressed = false
-            // Process earlier rounds first; stable ids second
-            matches.sortWith(compareBy<Match> { it.round }.thenBy { it.id })
-
-            // Work on a snapshot so we can modify the original list safely
-            val snapshot = matches.toList()
-            for (m in snapshot) {
-                if (m.winner != null) continue
-
-                val p1 = m.player1
-                val p2 = m.player2
-
-                val hasBye = (p1?.id == BYE_ID) xor (p2?.id == BYE_ID)
-                val bothReal = (p1 != null && p1.id != BYE_ID) && (p2 != null && p2.id != BYE_ID)
-
-                // Only auto-advance when exactly one side is a BYE and the other is a real player
-                if (hasBye) {
-                    val winner = if (p1?.id == BYE_ID) p2!! else p1!!
-
-                    // Mark current match winner
-                    val idx = matches.indexOfFirst { it.id == m.id && it.round == m.round }
-                    if (idx != -1) {
-                        matches[idx] = m.copy(winner = winner)
-                    }
-
-                    // Advance to next round
-                    if (m.round < totalRounds) {
-                        val nextRound = m.round + 1
-                        val nextMatchIndex = m.id / 2
-                        val nextMatchId = (nextRound * 100) + nextMatchIndex
-
-                        val existingNext = matches.firstOrNull { it.id == nextMatchId }
-                        val baseNext = existingNext ?: Match(
-                            id = nextMatchId,
-                            round = nextRound,
-                            player1 = null,
-                            player2 = null
-                        )
-
-                        val filledNext = if (m.id % 2 == 0) {
-                            baseNext.copy(player1 = winner)
-                        } else {
-                            baseNext.copy(player2 = winner)
-                        }
-
-                        if (existingNext == null) {
-                            matches.add(filledNext)
-                        } else {
-                            matches[matches.indexOf(existingNext)] = filledNext
-                        }
-                    }
-
-                    progressed = true
-                } else {
-                    // Do nothing:
-                    // - bothReal -> wait for user to pick a winner
-                    // - not fully formed yet (null slot) -> will be handled in a later pass
-                }
-            }
-            // Loop again in case advancing created a new match that also has a BYE
-        } while (progressed)
-    }
-
-
-
-    /** Undo last winner selection */
-    fun undo() {
-        if (history.isNotEmpty()) {
-            _uiState.value = history.pop()
+        val existing = matches.firstOrNull { it.id == matchId }
+        val base = existing ?: Match(
+            id = matchId,
+            round = round,
+            player1 = null,
+            player2 = null
+        )
+        val filled = if (toPlayer1) base.copy(player1 = player) else base.copy(player2 = player)
+        if (existing == null) {
+            matches.add(filled)
+        } else {
+            matches[matches.indexOf(existing)] = filled
         }
     }
 
-    /** Reset whole bracket */
-    fun reset() {
-        _uiState.value = BracketUiState()
-        history.clear()
-    }
-
-    // In ViewModel
-    private var lastSeed: Long = System.currentTimeMillis()
-
-    fun shufflePlayers() {
-        val players = _uiState.value.players
-        if (players.isEmpty()) return
-        lastSeed = System.currentTimeMillis()
-        _uiState.value = _uiState.value.copy(
-            players = players.shuffled(java.util.Random(lastSeed))
-        )
-    }
-
+    /** Classic bit trick. */
+    private fun isPowerOfTwo(x: Int): Boolean = x > 0 && (x and (x - 1)) == 0
 }
