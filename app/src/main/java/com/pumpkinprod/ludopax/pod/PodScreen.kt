@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.FilterChip
@@ -30,6 +32,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -42,31 +48,44 @@ fun PodScreen(viewModel: PodViewModel = viewModel()) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp)
+            .padding(16.dp) // keep your screen padding here
     ) {
         if (!uiState.isBracketStarted) {
+            // PlayerSetup already handles scroll + IME insets
             PlayerSetup(viewModel)
         } else {
-            BracketView(
-                matches = uiState.matches,
-                onSelectWinner = { matchId, player -> viewModel.selectWinner(matchId, player) }
-            )
+            // Make the bracket view scrollable
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                BracketView(
+                    matches = uiState.matches,
+                    onSelectWinner = { matchId, player -> viewModel.selectWinner(matchId, player) }
+                )
 
-            Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(16.dp))
 
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { viewModel.undo() }) { Text("Undo") }
-                Button(onClick = { viewModel.reset() }) { Text("Reset") }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { viewModel.undo() }) { Text("Undo") }
+                    Button(onClick = { viewModel.reset() }) { Text("Reset") }
+                }
+
+                // Small bottom spacer so buttons aren't glued to the edge / nav bar
+                Spacer(Modifier.height(16.dp))
             }
         }
     }
 }
 
 
+
 @Composable
 fun PlayerSetup(viewModel: PodViewModel) {
     var playerCount by remember { mutableStateOf(4) }
     val playerNames = remember { mutableStateListOf("", "", "", "") }
+    val focusManager = LocalFocusManager.current
 
     LazyColumn(
         modifier = Modifier
@@ -103,9 +122,15 @@ fun PlayerSetup(viewModel: PodViewModel) {
                 value = playerNames[i],
                 onValueChange = { playerNames[i] = it },
                 label = { Text("Player ${i + 1}") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp) // match screen padding visually
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Words,
+                    imeAction = if (i == playerNames.lastIndex) ImeAction.Done else ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { focusManager.moveFocus(FocusDirection.Down) },
+                    onDone = { focusManager.clearFocus() }
+                ),
+                modifier = Modifier.fillMaxWidth()
             )
         }
 
